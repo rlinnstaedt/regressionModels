@@ -1,0 +1,101 @@
+---
+output: pdf_document
+---
+## Exploring MPG of Select Car Models
+
+```{r, echo=FALSE}
+library(datasets)
+data(mtcars)
+```
+
+
+### Executive Summary
+
+The purpose of this study is to investigate the relationship between mpg and the
+type of transmission as well as the effect of any confounding variables.  We would
+specifically like to know whether manual or automatic results in better gas mileage.
+
+Cars with manual transmission will get 2.9 more miles per gallon than cars with automatic transmissions adjusted by weight and quarter mile time.  
+
+### Analysis
+
+As shown by fig1, the mean for an automatic transmission is 17.15 and the mean for a manual transmission is 24.39.  However, this is just based on a simple model. To explore further we'll examine the results of all variables fitted to mpg:
+
+```{r}
+allVar <- lm(mpg ~ ., mtcars)
+summary(allVar)
+```
+
+Using the step function to remove/add each variable iteratively to the regression.   
+
+```{r, results='hide'}
+bestVar <- step(allVar, direction = "both")
+```
+
+``` {r}
+summary(bestVar)
+```
+
+The best fit model uses the variables weight (per 1000lbs), qsec (1/4 mile time) and transmission.  The adjusted R-squared of our best fit linear regression is 83.4.  That is to say those three variables explain 83.4% of the variation in mpg.  Fig3 shows the interaction between the 3 variables and mpg, confirming our coefficients.  
+
+-Every 1000 lb increase results in -3.92 mpg
+
+-Every 1 sec increase in qsec results in 1.23 mpg (increasing qsec should mean a decrease in performance)
+
+
+```{r}
+justTransmission <- lm(mpg ~ am, mtcars)
+anova(justTransmission, bestVar)
+```
+
+Shows the p-value is highly significant, thus rejecting the null hypothesis that wt and qsec don't contribute to mpg.
+
+### Residuals
+
+For the followiing section refer to fig2.:
+
+- Residuals vs Fitted <- points are randomly scattered indicating independence
+
+- Normal QQ <- points fall on line indicating normally distributed
+
+- Scale-Location <- indicates constant variance
+
+
+```{r}
+leverage <- hatvalues(bestVar)
+tail(sort(leverage), 3)
+```
+```{r}
+influential <- dfbetas(bestVar)
+tail(sort(influential[,3]), 3)
+```
+
+- Residuals vs Leverage <- Points mentioned here match cars indicated by the measures of influence. 
+
+### Inference
+
+```{r}
+t.test(mpg~am, mtcars)
+```
+
+Rejects the null hypothesis that there is no difference in mpg based on transmission.
+
+### Index
+
+```{r, echo=FALSE}
+boxplot(mpg ~ am, data = mtcars, xlab = "Transmission: 0 = Automatic, 1 = Manual",
+        ylab = "MPG", main = "fig1. MPG by Transmission Type")
+```
+
+fig2.
+```{r, echo=FALSE}
+par(mfrow = c(2, 2))
+plot(bestVar)
+```
+
+fig3.
+```{r, echo=FALSE}
+mtcars_vars <- mtcars[ ,c(1,6,7,9)]
+pairs(mtcars_vars, panel = panel.smooth)
+```
+
